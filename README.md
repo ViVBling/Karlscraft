@@ -1,2 +1,2 @@
 # Karlscraft
-Offizielles Repository für den Karlscraft-Server
+Offizielles Repository für den Karlscraft-Server.
