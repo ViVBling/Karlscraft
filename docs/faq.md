@@ -321,3 +321,8 @@ Das ist RP-konform und schadet der Szene nicht.
 ### ❓ **Was ist das Wichtigste für neue RP-Spieler auf Karlscraft?**
 💬 Ganz einfach: **Rede so, als wärst du wirklich da.**  
 Wenn du das tust, bist du automatisch perfekt im RP, auch ohne Erfahrung.
+
+### ❓ **Warum sehe ich bei LittleFrames-Videos nur eine weiße Fläche?**
+💬 Wenn du mit LittleFrames Videos abspielen möchtest, brauchst du zusätzlich den **[VLC Media Player](https://get.videolan.org/vlc/3.0.23/win64/vlc-3.0.23-win64.exe)**.
+Ohne VLC können Videos technisch nicht wiedergegeben werden – die Frames bleiben dann einfach weiß.
+Lade dir VLC herunter und installiere ihn auf deinem PC, danach funktionieren alle Video-Features von LittleFrames wie vorgesehen.
