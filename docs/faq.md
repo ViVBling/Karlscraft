@@ -10,7 +10,7 @@
 💬 Starte das Modpack (MultiMC + unsere Batchdatei). Im Hauptmenü findest du den Button **„Offizieller Server“** oder die Adresse im Mehrspielermenü. Klicken, einloggen, Karlsruhe besuchen – fertig.
 
 ### ❓ **Wie installiere ich das Modpack?**
-💬 [Hier geht’s zur Anleitung](https://github.com/ViVBling/RevelationPlusPlus/wiki/Installation-(neu)) – Batchdatei in den `instances`-Ordner von MultiMC legen, ausführen, warten. Die Batchdatei zieht das komplette Modpack automatisch.
+💬 [Hier geht’s zur Anleitung](https://github.com/ViVBling/RevelationPlusPlus/wiki/Revelation---%E2%80%93-Schnellstart%E2%80%90Anleitung) – Batchdatei in den `instances`-Ordner von MultiMC legen, ausführen, warten. Die Batchdatei zieht das komplette Modpack automatisch.
 
 ### ❓ **Brauche ich Mods, um mitspielen zu können?**
 💬 Ja. Ohne das Modpack geht gar nichts. Mods liefern Mechaniken, Roleplay liefern wir.
