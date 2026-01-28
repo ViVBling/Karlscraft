@@ -143,44 +143,7 @@
     
     <script>
         const plotData = {
-  "Oberwelt": [
-    {
-      "name": "_PLOT_4",
-      "owner": "Milchmann77",
-      "owner_uuid": "a42e0cf4-8987-4184-b802-8e40414465ad",
-      "low": {
-        "x": -48,
-        "y": 0,
-        "z": -48
-      },
-      "high": {
-        "x": -33,
-        "y": 256,
-        "z": -33
-      },
-      "area_m2": 256,
-      "price": 65536,
-      "color": "#1fc836"
-    },
-    {
-      "name": "_PLOT_3",
-      "owner": "Milchmann77",
-      "owner_uuid": "a42e0cf4-8987-4184-b802-8e40414465ad",
-      "low": {
-        "x": -16,
-        "y": 0,
-        "z": -16
-      },
-      "high": {
-        "x": 15,
-        "y": 256,
-        "z": 15
-      },
-      "area_m2": 1024,
-      "price": 262144,
-      "color": "#1fc836"
-    }
-  ]
+  "Oberwelt": []
 };
         
         const canvas = document.getElementById('canvas');
@@ -264,7 +227,7 @@
             // Grid zeichnen
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1;
-            const gridSize = 50 * scale;
+            const gridSize = 16 * scale;
             const startX = -Math.ceil(canvas.width / 2 / gridSize) * gridSize;
             const endX = Math.ceil(canvas.width / 2 / gridSize) * gridSize;
             const startY = -Math.ceil(canvas.height / 2 / gridSize) * gridSize;
