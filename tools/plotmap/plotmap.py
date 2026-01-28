@@ -107,7 +107,7 @@ def generate_html_map(json_file, output_file='minecraft_map.html'):
                 'low': low,
                 'high': high,
                 'area_m2': area_m2,
-                'price': price + " €",
+                'price': str(price, " €"),
                 'color': get_color_from_uuid(owner_uuid)
             }
             
