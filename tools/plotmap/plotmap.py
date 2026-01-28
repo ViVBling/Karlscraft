@@ -344,7 +344,7 @@ def generate_html_map(json_file, output_file='minecraft_map.html'):
             // Grid zeichnen
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1;
-            const gridSize = 50 * scale;
+            const gridSize = 16 * scale;
             const startX = -Math.ceil(canvas.width / 2 / gridSize) * gridSize;
             const endX = Math.ceil(canvas.width / 2 / gridSize) * gridSize;
             const startY = -Math.ceil(canvas.height / 2 / gridSize) * gridSize;
