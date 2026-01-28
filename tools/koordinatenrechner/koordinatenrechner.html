@@ -1,88 +1,372 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Karte → Minecraft‑Koordinaten (Karlsruher Pyramide als Nullpunkt)</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <style>
-    html,body{height:100%;margin:0}
-    #map{width:100vw;height:100vh;cursor:default;}
-    .tooltip-text{border-bottom:1px dotted #000; cursor:help;}
-    .mcY-high{color:red; font-weight:bold;}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karlscraft - Koordinatenrechner</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #2c3e50;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+            cursor: crosshair;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 360px;
+            font-size: 14px;
+        }
+        
+        .info-panel h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        
+        .info-panel p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .info-panel strong {
+            color: #2c3e50;
+            display: inline-block;
+            min-width: 140px;
+        }
+        
+        .minecraft-coords {
+            background: #27ae60;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        .real-coords {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        
+        .warning {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .layer-control {
+            position: absolute;
+            top: 20px;
+            left: 60px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+        
+        .layer-control h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        
+        .layer-control label {
+            display: block;
+            margin: 8px 0;
+            cursor: pointer;
+            color: #2c3e50;
+        }
+        
+        .layer-control input {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .elevation-loading {
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        .y-limit-exceeded {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <div id="map"></div>
+    <div id="map"></div>
+    
+    <div class="layer-control">
+        <h3>🗺️ Kartenebenen</h3>
+        <label>
+            <input type="radio" name="layer" value="osm" checked>
+            OpenStreetMap
+        </label>
+        <label>
+            <input type="radio" name="layer" value="topo">
+            OpenTopoMap
+        </label>
+        <label>
+            <input type="radio" name="layer" value="railway">
+            OpenRailwayMap
+        </label>
+    </div>
+    
+    <div class="info-panel" id="infoPanel">
+        <h2>🎮 Karlscraft Koordinatenrechner</h2>
+        <p>Klicke auf die Karte, um Minecraft-Koordinaten zu erhalten!</p>
+        <p style="margin-top: 15px; color: #7f8c8d; font-size: 12px;">
+            <strong>Nullpunkt:</strong> Pyramide am Marktplatz<br>
+            <strong>Rotation:</strong> 4° für gerade Kaiserstraße<br>
+            <strong>Maßstab:</strong> 1:1
+        </p>
+    </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script>
-    const PYRAMID_LAT = 49.00923;
-    const PYRAMID_LON = 8.403911;
-    const PYRAMID_MINECRAFT_Y = 58; // absolute Minecraft-Höhe am Nullpunkt
-
-    const ROT_DEG = -4; // virtuelle Neigung für Berechnung der Koordinaten
-    const ROT_RAD = ROT_DEG * Math.PI / 180;
-
-    const map = L.map('map', { zoomControl:true }).setView([PYRAMID_LAT, PYRAMID_LON], 18);
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
-    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenTopoMap & OpenStreetMap contributors'});
-    L.control.layers({"OpenStreetMap":osm, "OpenTopoMap":topo}).addTo(map);
-
-    const R_MAJOR = 6378137.0;
-    function lonToMercX(lon){ return R_MAJOR * lon * Math.PI/180.0; }
-    function latToMercY(lat){ const latRad = lat * Math.PI/180.0; return R_MAJOR * Math.log(Math.tan(Math.PI/4 + latRad/2)); }
-    const pyramidMerc = { x: lonToMercX(PYRAMID_LON), y: latToMercY(PYRAMID_LAT) };
-
-    function rotateMercPoint(x, y, angle){
-      const cos = Math.cos(angle), sin = Math.sin(angle);
-      const dx = x - pyramidMerc.x, dy = y - pyramidMerc.y;
-      const rx = dx * cos - dy * sin;
-      const ry = dx * sin + dy * cos;
-      return { x: rx, y: ry };
-    }
-
-    async function fetchElevation(lat, lon) {
-      try {
-        const url = `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-        return data.results?.[0]?.elevation ?? 0;
-      } catch(e) { console.error('Elevation-Fehler', e); return 0; }
-    }
-
-    map.on('click', async function(ev){
-      const latlng = ev.latlng;
-      const clickedMerc = { x: lonToMercX(latlng.lng), y: latToMercY(latlng.lat) };
-
-      // virtuelle Drehung: Minus vor ROT_RAD für korrekte Ausrichtung
-      const rotated = rotateMercPoint(clickedMerc.x, clickedMerc.y, -ROT_RAD);
-
-      // Minecraft-Koordinaten: X = Ost-West, Z = Nord-Süd (Süden = positiv)
-      const mcX = rotated.x;
-      const mcZ = -rotated.y;
-      const elevationNN = await fetchElevation(latlng.lat, latlng.lng);
-      const mcY = elevationNN - PYRAMID_MINECRAFT_Y; // Höhe relativ zu Nullpunkt, ganze Zahl
-
-      // Y-Koordinate rot färben, wenn sie außerhalb 0-255 liegt
-      const mcYClass = (mcY < 0 || mcY > 255) ? 'mcY-high' : '';
-
-      if(window._lastMarker) map.removeLayer(window._lastMarker);
-      window._lastMarker = L.marker(latlng).addTo(map);
-
-      const popupHtml = `
-        <div>
-          <b>Ausgewählter Punkt</b><br>
-          Lat: ${latlng.lat.toFixed(6)}, Lng: ${latlng.lng.toFixed(6)}<br>
-          <hr>
-          <b>Gelände-Höhe:</b> ${elevationNN} m<br>
-          <b class='tooltip-text' title='Die Y-Koordinate zeigt die Höhe des Bodens, nicht die Höhe der Gebäude'>Minecraft-Koordinaten</b><br>
-          X: ${Math.round(mcX)}, Y: <span class='${mcYClass}'>${Math.round(mcY)}</span>, Z: ${Math.round(mcZ)}
-        </div>
-      `;
-
-      window._lastMarker.bindPopup(popupHtml).openPopup();
-    });
-  </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Nullpunkt: Pyramide am Marktplatz
+        const ORIGIN_LAT = 49.00923;
+        const ORIGIN_LON = 8.4039;
+        const ORIGIN_ELEVATION = 115 + 8; // Meter über NN
+        const MINECRAFT_Y_ORIGIN = 64;
+        const ROTATION_ANGLE = 4; // Grad Neigung für gerade Kaiserstraße
+        
+        // Initialisiere Karte
+        const map = L.map('map').setView([ORIGIN_LAT, ORIGIN_LON], 15);
+        
+        // Layer definieren
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 22
+        });
+        
+        const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenTopoMap contributors',
+            maxZoom: 17
+        });
+        
+        const railwayLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
+            attribution: '© OpenRailwayMap contributors',
+            maxZoom: 19
+        });
+        
+        // Standardlayer hinzufügen
+        osmLayer.addTo(map);
+        let currentLayer = osmLayer;
+        
+        // Layer-Steuerung
+        document.querySelectorAll('input[name="layer"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                map.removeLayer(currentLayer);
+                switch(e.target.value) {
+                    case 'osm':
+                        currentLayer = osmLayer;
+                        break;
+                    case 'topo':
+                        currentLayer = topoLayer;
+                        break;
+                    case 'railway':
+                        currentLayer = railwayLayer;
+                        break;
+                }
+                currentLayer.addTo(map);
+            });
+        });
+        
+        // Marker für Nullpunkt
+        const originMarker = L.marker([ORIGIN_LAT, ORIGIN_LON], {
+            icon: L.divIcon({
+                className: 'origin-marker',
+                html: '🔺',
+                iconSize: [30, 30],
+                iconAnchor: [7, 9]
+            })
+        }).addTo(map);
+        originMarker.bindPopup('<strong>Nullpunkt</strong><br>Pyramide am Marktplatz<br>MC: X:0, Y:64, Z:0');
+        
+        // Aktueller Marker
+        let currentMarker = null;
+        
+        // Funktion: Haversine-Formel für Distanzberechnung in Metern
+        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Erdradius in Metern
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            
+            return R * c;
+        }
+        
+        // Funktion: Richtungswinkel berechnen
+        function getBearing(lat1, lon1, lat2, lon2) {
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            
+            const y = Math.sin(Δλ) * Math.cos(φ2);
+            const x = Math.cos(φ1) * Math.sin(φ2) -
+                      Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+            const θ = Math.atan2(y, x);
+            
+            return (θ * 180 / Math.PI + 360) % 360;
+        }
+        
+        // Funktion: Höhe von Open-Elevation API abrufen
+        async function getElevation(lat, lon) {
+            try {
+                const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    return data.results[0].elevation;
+                }
+            } catch (error) {
+                console.error('Fehler beim Abrufen der Höhe:', error);
+            }
+            return null;
+        }
+        
+        // Funktion: Koordinaten zu Minecraft umrechnen
+        async function convertToMinecraft(lat, lon) {
+            // Distanz zum Nullpunkt
+            const distance = getDistanceInMeters(ORIGIN_LAT, ORIGIN_LON, lat, lon);
+            
+            // Richtung vom Nullpunkt zum Punkt
+            const bearing = getBearing(ORIGIN_LAT, ORIGIN_LON, lat, lon);
+            
+            // Rotation um 4° anwenden (damit Kaiserstraße gerade wird)
+            const adjustedBearing = (bearing - ROTATION_ANGLE + 360) % 360;
+            
+            // In Minecraft-Koordinaten umrechnen
+            // Norden = 0°, Osten = 90°, Süden = 180°, Westen = 270°
+            // In Minecraft: +X = Osten, -X = Westen, -Z = Norden, +Z = Süden
+            const angleRad = adjustedBearing * Math.PI / 180;
+            
+            const minecraftX = Math.round(distance * Math.sin(angleRad));
+            const minecraftZ = Math.round(-distance * Math.cos(angleRad));
+            
+            // Höhe abrufen
+            const elevation = await getElevation(lat, lon);
+            let minecraftY = null;
+            if (elevation !== null) {
+                minecraftY = Math.round(MINECRAFT_Y_ORIGIN + (elevation - ORIGIN_ELEVATION));
+            }
+            
+            return {
+                x: minecraftX,
+                y: minecraftY,
+                z: minecraftZ,
+                elevation: elevation
+            };
+        }
+        
+        // Karten-Klick Event
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lon = e.latlng.lng;
+            
+            // Alten Marker entfernen
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+            
+            // Neuen Marker setzen
+            currentMarker = L.marker([lat, lon], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(map);
+            
+            // Info-Panel mit Ladehinweis aktualisieren
+            const infoPanel = document.getElementById('infoPanel');
+            infoPanel.innerHTML = `
+                <h2>🎮 Karlscraft Koordinatenrechner</h2>
+                <div class="real-coords">
+                    <strong>📍 Echte Koordinaten:</strong><br>
+                    Breite: ${lat.toFixed(6)}°<br>
+                    Länge: ${lon.toFixed(6)}°<br>
+                    Höhe: <span class="elevation-loading">Wird geladen...</span>
+                </div>
+                <div class="minecraft-coords">
+                    <strong>⛏️ Minecraft Koordinaten:</strong><br>
+                    Berechne...
+                </div>
+            `;
+            
+            // Minecraft-Koordinaten berechnen
+            const mc = await convertToMinecraft(lat, lon);
+            
+            // Info-Panel aktualisieren
+            let elevationText = mc.elevation !== null ? `${mc.elevation.toFixed(1)} m` : 'Nicht verfügbar';
+            let yText = mc.y !== null ? `${mc.y}` : 'Nicht verfügbar';
+            let yClass = '';
+            let warning = '';
+            
+            if (mc.y !== null && mc.y > 255) {
+                yClass = 'y-limit-exceeded';
+                warning = '<div class="warning">⚠️ WARNUNG: Y-Koordinate über 255!<br>Baulimit überschritten!</div>';
+            }
+            
+            infoPanel.innerHTML = `
+                <h2>🎮 Karlscraft Koordinaten</h2>
+                <div class="real-coords">
+                    <strong>📍 Echte Koordinaten:</strong><br>
+                    Breite: ${lat.toFixed(6)}°<br>
+                    Länge: ${lon.toFixed(6)}°<br>
+                    Höhe: ${elevationText} über NN
+                </div>
+                <div class="minecraft-coords">
+                    <strong>⛏️ Minecraft Koordinaten:</strong><br>
+                    X: ${mc.x}<br>
+                    Y: <span class="${yClass}">${yText}</span><br>
+                    Z: ${mc.z}
+                </div>
+                ${warning}
+                <p style="margin-top: 15px; color: #7f8c8d; font-size: 12px;">
+                    <strong>Distanz vom Nullpunkt:</strong><br>
+                    ${Math.round(Math.sqrt(mc.x*mc.x + mc.z*mc.z))} Blöcke
+                </p>
+            `;
+        });
+    </script>
 </body>
 </html>
