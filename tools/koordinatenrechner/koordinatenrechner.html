@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karlscraft - Koordinatenrechner</title>
+    <title>Karlscraft - Minecraft Koordinaten Karte (Vincenty)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -32,7 +32,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 1000;
-            max-width: 360px;
+            max-width: 350px;
             font-size: 14px;
         }
         
@@ -120,6 +120,16 @@
             color: #e74c3c;
             font-weight: bold;
         }
+
+        .accuracy-badge {
+            background: #9b59b6;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            display: inline-block;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -142,7 +152,7 @@
     </div>
     
     <div class="info-panel" id="infoPanel">
-        <h2>🎮 Karlscraft Koordinatenrechner</h2>
+        <h2>🎮 Karlscraft Koordinaten</h2>
         <p>Klicke auf die Karte, um Minecraft-Koordinaten zu erhalten!</p>
         <p style="margin-top: 15px; color: #7f8c8d; font-size: 12px;">
             <strong>Nullpunkt:</strong> Pyramide am Marktplatz<br>
@@ -156,9 +166,14 @@
         // Nullpunkt: Pyramide am Marktplatz
         const ORIGIN_LAT = 49.00923;
         const ORIGIN_LON = 8.4039;
-        const ORIGIN_ELEVATION = 115 + 8; // Meter über NN
+        const ORIGIN_ELEVATION = 115; // Meter über NN
         const MINECRAFT_Y_ORIGIN = 64;
         const ROTATION_ANGLE = 4; // Grad Neigung für gerade Kaiserstraße
+        
+        // WGS84 Ellipsoid-Parameter
+        const WGS84_A = 6378137.0; // Große Halbachse in Metern
+        const WGS84_B = 6356752.314245; // Kleine Halbachse in Metern
+        const WGS84_F = 1 / 298.257223563; // Abplattung
         
         // Initialisiere Karte
         const map = L.map('map').setView([ORIGIN_LAT, ORIGIN_LON], 15);
@@ -166,7 +181,7 @@
         // Layer definieren
         const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
-            maxZoom: 22
+            maxZoom: 19
         });
         
         const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -208,7 +223,7 @@
                 className: 'origin-marker',
                 html: '🔺',
                 iconSize: [30, 30],
-                iconAnchor: [7, 9]
+                iconAnchor: [7, 7]
             })
         }).addTo(map);
         originMarker.bindPopup('<strong>Nullpunkt</strong><br>Pyramide am Marktplatz<br>MC: X:0, Y:64, Z:0');
@@ -216,34 +231,77 @@
         // Aktueller Marker
         let currentMarker = null;
         
-        // Funktion: Haversine-Formel für Distanzberechnung in Metern
-        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Erdradius in Metern
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
+        // Vincenty-Formel: Direkte Methode (Forward)
+        // Berechnet Distanz und initialen Richtungswinkel zwischen zwei Punkten
+        function vincentyInverse(lat1, lon1, lat2, lon2) {
+            const a = WGS84_A;
+            const b = WGS84_B;
+            const f = WGS84_F;
             
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const L = (lon2 - lon1) * Math.PI / 180;
+            const U1 = Math.atan((1 - f) * Math.tan(lat1 * Math.PI / 180));
+            const U2 = Math.atan((1 - f) * Math.tan(lat2 * Math.PI / 180));
+            const sinU1 = Math.sin(U1);
+            const cosU1 = Math.cos(U1);
+            const sinU2 = Math.sin(U2);
+            const cosU2 = Math.cos(U2);
             
-            return R * c;
-        }
-        
-        // Funktion: Richtungswinkel berechnen
-        function getBearing(lat1, lon1, lat2, lon2) {
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            let lambda = L;
+            let lambdaP;
+            let iterLimit = 100;
+            let cosSqAlpha, sinSigma, cos2SigmaM, cosSigma, sigma;
             
-            const y = Math.sin(Δλ) * Math.cos(φ2);
-            const x = Math.cos(φ1) * Math.sin(φ2) -
-                      Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-            const θ = Math.atan2(y, x);
+            do {
+                const sinLambda = Math.sin(lambda);
+                const cosLambda = Math.cos(lambda);
+                sinSigma = Math.sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda) +
+                    (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) * 
+                    (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda));
+                
+                if (sinSigma === 0) {
+                    return { distance: 0, bearing: 0 };
+                }
+                
+                cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
+                sigma = Math.atan2(sinSigma, cosSigma);
+                const sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
+                cosSqAlpha = 1 - sinAlpha * sinAlpha;
+                cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha;
+                
+                if (isNaN(cos2SigmaM)) {
+                    cos2SigmaM = 0;
+                }
+                
+                const C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
+                lambdaP = lambda;
+                lambda = L + (1 - C) * f * sinAlpha *
+                    (sigma + C * sinSigma * (cos2SigmaM + C * cosSigma * 
+                    (-1 + 2 * cos2SigmaM * cos2SigmaM)));
+                    
+            } while (Math.abs(lambda - lambdaP) > 1e-12 && --iterLimit > 0);
             
-            return (θ * 180 / Math.PI + 360) % 360;
+            if (iterLimit === 0) {
+                return null;
+            }
+            
+            const uSq = cosSqAlpha * (a * a - b * b) / (b * b);
+            const A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
+            const B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
+            const deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * 
+                (cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM) -
+                B / 6 * cos2SigmaM * (-3 + 4 * sinSigma * sinSigma) * 
+                (-3 + 4 * cos2SigmaM * cos2SigmaM)));
+            
+            const distance = b * A * (sigma - deltaSigma);
+            
+            // Initialer Richtungswinkel
+            const bearing = Math.atan2(cosU2 * Math.sin(lambda),
+                cosU1 * sinU2 - sinU1 * cosU2 * Math.cos(lambda));
+            
+            return {
+                distance: distance,
+                bearing: (bearing * 180 / Math.PI + 360) % 360
+            };
         }
         
         // Funktion: Höhe von Open-Elevation API abrufen
@@ -260,13 +318,18 @@
             return null;
         }
         
-        // Funktion: Koordinaten zu Minecraft umrechnen
+        // Funktion: Koordinaten zu Minecraft umrechnen (mit Vincenty)
         async function convertToMinecraft(lat, lon) {
-            // Distanz zum Nullpunkt
-            const distance = getDistanceInMeters(ORIGIN_LAT, ORIGIN_LON, lat, lon);
+            // Vincenty-Berechnung für Distanz und Richtung
+            const result = vincentyInverse(ORIGIN_LAT, ORIGIN_LON, lat, lon);
             
-            // Richtung vom Nullpunkt zum Punkt
-            const bearing = getBearing(ORIGIN_LAT, ORIGIN_LON, lat, lon);
+            if (!result) {
+                console.error('Vincenty-Berechnung fehlgeschlagen');
+                return null;
+            }
+            
+            const distance = result.distance; // in Metern
+            const bearing = result.bearing; // in Grad
             
             // Rotation um 4° anwenden (damit Kaiserstraße gerade wird)
             const adjustedBearing = (bearing - ROTATION_ANGLE + 360) % 360;
@@ -290,7 +353,8 @@
                 x: minecraftX,
                 y: minecraftY,
                 z: minecraftZ,
-                elevation: elevation
+                elevation: elevation,
+                distance: distance
             };
         }
         
@@ -319,7 +383,7 @@
             // Info-Panel mit Ladehinweis aktualisieren
             const infoPanel = document.getElementById('infoPanel');
             infoPanel.innerHTML = `
-                <h2>🎮 Karlscraft Koordinatenrechner</h2>
+                <h2>🎮 Karlscraft Koordinaten</h2>
                 <div class="real-coords">
                     <strong>📍 Echte Koordinaten:</strong><br>
                     Breite: ${lat.toFixed(6)}°<br>
@@ -328,12 +392,20 @@
                 </div>
                 <div class="minecraft-coords">
                     <strong>⛏️ Minecraft Koordinaten:</strong><br>
-                    Berechne...
+                    Berechne mit Vincenty...
                 </div>
             `;
             
             // Minecraft-Koordinaten berechnen
             const mc = await convertToMinecraft(lat, lon);
+            
+            if (!mc) {
+                infoPanel.innerHTML = `
+                    <h2>🎮 Karlscraft Koordinaten</h2>
+                    <div class="warning">⚠️ Fehler bei der Berechnung!</div>
+                `;
+                return;
+            }
             
             // Info-Panel aktualisieren
             let elevationText = mc.elevation !== null ? `${mc.elevation.toFixed(1)} m` : 'Nicht verfügbar';
@@ -345,6 +417,8 @@
                 yClass = 'y-limit-exceeded';
                 warning = '<div class="warning">⚠️ WARNUNG: Y-Koordinate über 255!<br>Baulimit überschritten!</div>';
             }
+            
+            const minecraftDistance = Math.round(Math.sqrt(mc.x*mc.x + mc.z*mc.z));
             
             infoPanel.innerHTML = `
                 <h2>🎮 Karlscraft Koordinaten</h2>
@@ -363,7 +437,8 @@
                 ${warning}
                 <p style="margin-top: 15px; color: #7f8c8d; font-size: 12px;">
                     <strong>Distanz vom Nullpunkt:</strong><br>
-                    ${Math.round(Math.sqrt(mc.x*mc.x + mc.z*mc.z))} Blöcke
+                    ${minecraftDistance} Blöcke<br>
+                    (${mc.distance.toFixed(2)} m real)
                 </p>
             `;
         });
