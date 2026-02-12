@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Plot Karte</title>
+    <title>Minecraft Plot Map</title>
     <style>
         * {
             margin: 0;
@@ -13,9 +13,9 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a1a;
-            color: #ffffff;
             overflow: hidden;
+            background: #1a1a1a;
+            color: #fff;
         }
         
         #controls {
@@ -29,398 +29,400 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
         
-        #dimensionSelect {
-            padding: 8px 12px;
-            font-size: 14px;
-            border: none;
-            border-radius: 4px;
-            background: #2a2a2a;
-            color: #ffffff;
-            cursor: pointer;
-            margin-bottom: 10px;
+        #controls label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        #controls select {
             width: 200px;
+            padding: 8px;
+            border-radius: 4px;
+            border: none;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
         }
         
         #info {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            bottom: 10px;
+            left: 10px;
             z-index: 1000;
             background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
+            padding: 10px 15px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            max-width: 300px;
+            font-size: 14px;
+            min-width: 200px;
         }
         
-        #canvas {
-            display: block;
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
             cursor: grab;
-            background: #0a0a0a;
+            position: relative;
         }
         
-        #canvas:active {
+        #canvas-container.grabbing {
             cursor: grabbing;
         }
         
-        .tooltip {
+        canvas {
+            display: block;
+            background: #0d0d0d;
+        }
+        
+        #tooltip {
             position: absolute;
             background: rgba(0, 0, 0, 0.95);
-            color: #ffffff;
-            padding: 12px;
+            color: #fff;
+            padding: 12px 16px;
             border-radius: 6px;
             pointer-events: none;
             display: none;
             z-index: 2000;
-            max-width: 280px;
+            max-width: 300px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             border: 1px solid #444;
         }
         
-        .tooltip h3 {
-            margin: 0 0 8px 0;
+        #tooltip .plot-name {
+            font-weight: bold;
             font-size: 16px;
+            margin-bottom: 8px;
             color: #4CAF50;
         }
         
-        .tooltip p {
-            margin: 4px 0;
+        #tooltip .plot-info {
             font-size: 13px;
-            line-height: 1.4;
+            line-height: 1.6;
         }
         
-        .tooltip .label {
+        #tooltip .plot-info strong {
             color: #aaa;
-            font-weight: 500;
-        }
-        
-        button {
-            padding: 8px 16px;
-            margin: 2px;
-            background: #2a2a2a;
-            color: #ffffff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-        
-        button:hover {
-            background: #3a3a3a;
-        }
-        
-        #zoomLevel {
-            color: #aaa;
-            font-size: 12px;
-            margin-top: 8px;
         }
     </style>
 </head>
 <body>
     <div id="controls">
-        <select id="dimensionSelect"></select>
-        <div>
-            <button onclick="zoomIn()">Zoom +</button>
-            <button onclick="zoomOut()">Zoom -</button>
-            <button onclick="resetView()">Reset</button>
-        </div>
-        <div id="zoomLevel">Zoom: 100%</div>
+        <label for="dimension-select">Dimension:</label>
+        <select id="dimension-select"></select>
     </div>
     
     <div id="info">
-        <h3 style="margin-bottom: 10px;">🗺️ Minecraft Plot Karte</h3>
-        <p style="font-size: 12px; color: #aaa;">
-            <strong>Steuerung:</strong><br>
-            • Maus ziehen: Verschieben<br>
-            • Mausrad: Zoomen<br>
-            • Hover: Plot-Info anzeigen
-        </p>
+        <div>Zoom: <span id="zoom-level">100%</span></div>
+        <div>Maus: Verschieben | Mausrad: Zoom</div>
     </div>
     
-    <canvas id="canvas"></canvas>
-    <div class="tooltip" id="tooltip"></div>
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <div id="tooltip"></div>
     
     <script>
-        const plotData = {
-  "Oberwelt": [
-    {
-      "name": "_PLOT_3",
-      "owner": "Milchmann77",
-      "owner_uuid": "a42e0cf4-8987-4184-b802-8e40414465ad",
-      "low": {
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      "high": {
-        "x": 6,
-        "y": 256,
-        "z": 3
-      },
-      "area_m2": 28,
-      "price": 7168,
-      "color": "#1fc836"
-    },
-    {
-      "name": "_PLOT_4",
-      "owner": "Milchmann77",
-      "owner_uuid": "a42e0cf4-8987-4184-b802-8e40414465ad",
-      "low": {
-        "x": 7,
-        "y": 0,
-        "z": 0
-      },
-      "high": {
-        "x": 15,
-        "y": 256,
-        "z": 3
-      },
-      "area_m2": 36,
-      "price": 9216,
-      "color": "#1fc836"
-    }
-  ]
-};
+        // Plot-Daten
+        const plotsData = {"0": [{"name": "Negerplot + Pissplot", "owner": "Milchmann77", "x_min": 0, "z_min": 0, "x_max": 15, "z_max": 3, "area": 64, "price": 16384, "color": "#51fa68"}]};
+        const dimensionNames = {"-1": "Nether", "-2147483648": "Mystcraft Profiler", "0": "Oberwelt", "1": "Ende"};
         
+        // Canvas Setup
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
         const tooltip = document.getElementById('tooltip');
-        const dimensionSelect = document.getElementById('dimensionSelect');
         
-        let currentDimension = null;
-        let currentPlots = [];
+        // Viewport-Zustand
+        let viewportX = 0;
+        let viewportZ = 0;
         let scale = 2;
-        let offsetX = 0;
-        let offsetY = 0;
         let isDragging = false;
-        let lastX = 0;
-        let lastY = 0;
+        let lastMouseX = 0;
+        let lastMouseZ = 0;
+        let currentDimension = 0;
+        let currentPlots = [];
         
         // Canvas-Größe anpassen
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            drawMap();
+            draw();
         }
         
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
         
-        // Dimensionen in Select laden
-        Object.keys(plotData).forEach(dim => {
-            const option = document.createElement('option');
-            option.value = dim;
-            option.textContent = dim;
-            dimensionSelect.appendChild(option);
-        });
-        
-        // Erste Dimension auswählen
-        if (Object.keys(plotData).length > 0) {
-            currentDimension = Object.keys(plotData)[0];
-            dimensionSelect.value = currentDimension;
-            currentPlots = plotData[currentDimension];
+        // Dimension-Auswahl initialisieren
+        function initDimensionSelect() {
+            const select = document.getElementById('dimension-select');
+            select.innerHTML = '';
+            
+            for (const [dim, name] of Object.entries(dimensionNames)) {
+                if (plotsData[dim] && plotsData[dim].length > 0) {
+                    const option = document.createElement('option');
+                    option.value = dim;
+                    option.textContent = name;
+                    select.appendChild(option);
+                }
+            }
+            
+            select.addEventListener('change', (e) => {
+                currentDimension = parseInt(e.target.value);
+                loadDimension();
+            });
+            
+            // Erste verfügbare Dimension laden
+            if (select.options.length > 0) {
+                currentDimension = parseInt(select.options[0].value);
+                loadDimension();
+            }
         }
         
-        dimensionSelect.addEventListener('change', (e) => {
-            currentDimension = e.target.value;
-            currentPlots = plotData[currentDimension];
-            resetView();
-        });
+        // Dimension laden
+        function loadDimension() {
+            currentPlots = plotsData[currentDimension] || [];
+            
+            if (currentPlots.length > 0) {
+                // Viewport zentrieren
+                centerViewport();
+            }
+            
+            draw();
+        }
         
-        // Plot-Grenzen berechnen
-        function getPlotBounds(plots) {
-            if (plots.length === 0) return { minX: -100, maxX: 100, minZ: -100, maxZ: 100 };
+        // Viewport auf alle Plots zentrieren
+        function centerViewport() {
+            if (currentPlots.length === 0) return;
             
             let minX = Infinity, maxX = -Infinity;
             let minZ = Infinity, maxZ = -Infinity;
             
-            plots.forEach(plot => {
-                minX = Math.min(minX, plot.low.x, plot.high.x);
-                maxX = Math.max(maxX, plot.low.x, plot.high.x);
-                minZ = Math.min(minZ, plot.low.z, plot.high.z);
-                maxZ = Math.max(maxZ, plot.low.z, plot.high.z);
-            });
+            for (const plot of currentPlots) {
+                minX = Math.min(minX, plot.x_min);
+                maxX = Math.max(maxX, plot.x_max);
+                minZ = Math.min(minZ, plot.z_min);
+                maxZ = Math.max(maxZ, plot.z_max);
+            }
             
-            return { minX, maxX, minZ, maxZ };
+            const centerX = (minX + maxX) / 2;
+            const centerZ = (minZ + maxZ) / 2;
+            
+            viewportX = centerX;
+            viewportZ = centerZ;
+            
+            // Zoom anpassen
+            const width = maxX - minX;
+            const depth = maxZ - minZ;
+            const scaleX = canvas.width / (width * 1.5);
+            const scaleZ = canvas.height / (depth * 1.5);
+            scale = Math.min(scaleX, scaleZ, 10);
+            scale = Math.max(scale, 0.1);
         }
         
-        // Karte zeichnen
-        function drawMap() {
+        // Welt- zu Screen-Koordinaten
+        function worldToScreen(x, z) {
+            const screenX = canvas.width / 2 + (x - viewportX) * scale;
+            const screenZ = canvas.height / 2 + (z - viewportZ) * scale;
+            return { x: screenX, z: screenZ };
+        }
+        
+        // Screen- zu Welt-Koordinaten
+        function screenToWorld(screenX, screenZ) {
+            const x = viewportX + (screenX - canvas.width / 2) / scale;
+            const z = viewportZ + (screenZ - canvas.height / 2) / scale;
+            return { x, z };
+        }
+        
+        // Zeichnen
+        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            if (currentPlots.length === 0) {
-                ctx.fillStyle = '#666';
-                ctx.font = '16px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Keine Plots in dieser Dimension', canvas.width / 2, canvas.height / 2);
-                return;
-            }
-            
-            // Koordinatensystem
-            ctx.save();
-            ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
-            
-            // Grid zeichnen
-            ctx.strokeStyle = '#222';
-            ctx.lineWidth = 1;
-            const gridSize = 16 * scale;
-            const startX = -Math.ceil(canvas.width / 2 / gridSize) * gridSize;
-            const endX = Math.ceil(canvas.width / 2 / gridSize) * gridSize;
-            const startY = -Math.ceil(canvas.height / 2 / gridSize) * gridSize;
-            const endY = Math.ceil(canvas.height / 2 / gridSize) * gridSize;
-            
-            for (let x = startX; x <= endX; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, startY);
-                ctx.lineTo(x, endY);
-                ctx.stroke();
-            }
-            
-            for (let y = startY; y <= endY; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(startX, y);
-                ctx.lineTo(endX, y);
-                ctx.stroke();
-            }
-            
-            // Achsen
-            ctx.strokeStyle = '#444';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-canvas.width, 0);
-            ctx.lineTo(canvas.width, 0);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(0, -canvas.height);
-            ctx.lineTo(0, canvas.height);
-            ctx.stroke();
+            // Gitter zeichnen
+            drawGrid();
             
             // Plots zeichnen
-            currentPlots.forEach(plot => {
-                const x1 = plot.low.x * scale;
-                const z1 = plot.low.z * scale;
-                const x2 = plot.high.x * scale;
-                const z2 = plot.high.z * scale;
-                
-                const width = Math.abs(x2 - x1) + scale;
-                const height = Math.abs(z2 - z1) + scale;
-                
-                ctx.fillStyle = plot.color + 'CC';
-                ctx.fillRect(Math.min(x1, x2), Math.min(z1, z2), width, height);
-                
-                ctx.strokeStyle = plot.color;
-                ctx.lineWidth = 2;
-                ctx.strokeRect(Math.min(x1, x2), Math.min(z1, z2), width, height);
-            });
+            for (const plot of currentPlots) {
+                drawPlot(plot);
+            }
             
-            ctx.restore();
+            // Zoom-Level aktualisieren
+            document.getElementById('zoom-level').textContent = Math.round(scale * 50) + '%';
         }
         
-        // Plot unter Mausposition finden
-        function getPlotAtPosition(mouseX, mouseY) {
-            const worldX = (mouseX - canvas.width / 2 - offsetX) / scale;
-            const worldZ = (mouseY - canvas.height / 2 - offsetY) / scale;
+        // Gitter zeichnen
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
             
-            for (let plot of currentPlots) {
-                const minX = Math.min(plot.low.x, plot.high.x);
-                const maxX = Math.max(plot.low.x, plot.high.x) + 1;
-                const minZ = Math.min(plot.low.z, plot.high.z);
-                const maxZ = Math.max(plot.low.z, plot.high.z) + 1;
-                
-                if (worldX >= minX && worldX <= maxX && worldZ >= minZ && worldZ <= maxZ) {
+            const gridSize = 64;
+            const worldBounds = {
+                left: viewportX - canvas.width / (2 * scale),
+                right: viewportX + canvas.width / (2 * scale),
+                top: viewportZ - canvas.height / (2 * scale),
+                bottom: viewportZ + canvas.height / (2 * scale)
+            };
+            
+            // Vertikale Linien
+            for (let x = Math.floor(worldBounds.left / gridSize) * gridSize; x <= worldBounds.right; x += gridSize) {
+                const p1 = worldToScreen(x, worldBounds.top);
+                const p2 = worldToScreen(x, worldBounds.bottom);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.z);
+                ctx.lineTo(p2.x, p2.z);
+                ctx.stroke();
+            }
+            
+            // Horizontale Linien
+            for (let z = Math.floor(worldBounds.top / gridSize) * gridSize; z <= worldBounds.bottom; z += gridSize) {
+                const p1 = worldToScreen(worldBounds.left, z);
+                const p2 = worldToScreen(worldBounds.right, z);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.z);
+                ctx.lineTo(p2.x, p2.z);
+                ctx.stroke();
+            }
+            
+            // Ursprung (0,0) hervorheben
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            const origin = worldToScreen(0, 0);
+            ctx.beginPath();
+            ctx.moveTo(origin.x - 10, origin.z);
+            ctx.lineTo(origin.x + 10, origin.z);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(origin.x, origin.z - 10);
+            ctx.lineTo(origin.x, origin.z + 10);
+            ctx.stroke();
+        }
+        
+        // Plot zeichnen
+        function drawPlot(plot) {
+            const p1 = worldToScreen(plot.x_min, plot.z_min);
+            const p2 = worldToScreen(plot.x_max + 1, plot.z_max + 1);
+            
+            const width = p2.x - p1.x;
+            const height = p2.z - p1.z;
+            
+            // Plot füllen
+            ctx.fillStyle = plot.color + 'CC';
+            ctx.fillRect(p1.x, p1.z, width, height);
+            
+            // Rahmen
+            ctx.strokeStyle = plot.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(p1.x, p1.z, width, height);
+            
+            // Name anzeigen (wenn groß genug)
+            if (width > 60 && height > 30) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(plot.owner, p1.x + width / 2, p1.z + height / 2);
+            }
+        }
+        
+        // Plot unter Maus finden
+        function getPlotAtPosition(mouseX, mouseZ) {
+            const world = screenToWorld(mouseX, mouseZ);
+            
+            for (const plot of currentPlots) {
+                if (world.x >= plot.x_min && world.x <= plot.x_max + 1 &&
+                    world.z >= plot.z_min && world.z <= plot.z_max + 1) {
                     return plot;
                 }
             }
+            
             return null;
         }
         
-        // Mouse Events
+        // Tooltip anzeigen
+        function showTooltip(plot, mouseX, mouseZ) {
+            if (!plot) {
+                tooltip.style.display = 'none';
+                return;
+            }
+            
+            tooltip.innerHTML = `
+                <div class="plot-name">${plot.name}</div>
+                <div class="plot-info">
+                    <div><strong>Besitzer:</strong> ${plot.owner}</div>
+                    <div><strong>Koordinaten:</strong> X: ${plot.x_min} bis ${plot.x_max}, Z: ${plot.z_min} bis ${plot.z_max}</div>
+                    <div><strong>Fläche:</strong> ${plot.area.toLocaleString('de-DE')} m²</div>
+                    <div><strong>Kaufpreis:</strong> ${plot.price.toLocaleString('de-DE')} €</div>
+                </div>
+            `;
+            
+            tooltip.style.display = 'block';
+            tooltip.style.left = mouseX + 15 + 'px';
+            tooltip.style.top = mouseZ + 15 + 'px';
+            
+            // Tooltip nicht außerhalb des Bildschirms
+            const rect = tooltip.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                tooltip.style.left = mouseX - rect.width - 15 + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                tooltip.style.top = mouseZ - rect.height - 15 + 'px';
+            }
+        }
+        
+        // Event-Handler
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
-            lastX = e.clientX;
-            lastY = e.clientY;
+            lastMouseX = e.clientX;
+            lastMouseZ = e.clientY;
+            container.classList.add('grabbing');
         });
         
         canvas.addEventListener('mousemove', (e) => {
             if (isDragging) {
-                const dx = e.clientX - lastX;
-                const dy = e.clientY - lastY;
-                offsetX += dx;
-                offsetY += dy;
-                lastX = e.clientX;
-                lastY = e.clientY;
-                drawMap();
-            }
-            
-            // Tooltip
-            const plot = getPlotAtPosition(e.clientX, e.clientY);
-            if (plot) {
-                tooltip.innerHTML = `
-                    <h3>${plot.name}</h3>
-                    <p><span class="label">Besitzer:</span> ${plot.owner}</p>
-                    <p><span class="label">Koordinaten:</span><br>
-                       Von X:${plot.low.x} Z:${plot.low.z}<br>
-                       Bis X:${plot.high.x} Z:${plot.high.z}</p>
-                    <p><span class="label">Fläche:</span> ${plot.area_m2} m²</p>
-                    <p><span class="label">Kaufpreis:</span> ${plot.price.toLocaleString('de-DE')} €</p>
-                `;
-                tooltip.style.display = 'block';
-                tooltip.style.left = (e.clientX + 15) + 'px';
-                tooltip.style.top = (e.clientY + 15) + 'px';
+                const dx = e.clientX - lastMouseX;
+                const dz = e.clientY - lastMouseZ;
+                
+                viewportX -= dx / scale;
+                viewportZ -= dz / scale;
+                
+                lastMouseX = e.clientX;
+                lastMouseZ = e.clientY;
+                
+                draw();
             } else {
-                tooltip.style.display = 'none';
+                const plot = getPlotAtPosition(e.clientX, e.clientY);
+                showTooltip(plot, e.clientX, e.clientY);
             }
         });
         
         canvas.addEventListener('mouseup', () => {
             isDragging = false;
+            container.classList.remove('grabbing');
         });
         
         canvas.addEventListener('mouseleave', () => {
             isDragging = false;
+            container.classList.remove('grabbing');
             tooltip.style.display = 'none';
         });
         
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            const newScale = scale * delta;
             
-            if (newScale >= 0.1 && newScale <= 10) {
-                scale = newScale;
-                document.getElementById('zoomLevel').textContent = `Zoom: ${Math.round(scale * 50)}%`;
-                drawMap();
-            }
+            const mouseWorld = screenToWorld(e.clientX, e.clientY);
+            
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+            scale *= zoomFactor;
+            scale = Math.max(0.1, Math.min(scale, 20));
+            
+            const newMouseWorld = screenToWorld(e.clientX, e.clientY);
+            viewportX += mouseWorld.x - newMouseWorld.x;
+            viewportZ += mouseWorld.z - newMouseWorld.z;
+            
+            draw();
         });
         
-        // Zoom-Funktionen
-        function zoomIn() {
-            if (scale < 10) {
-                scale *= 1.2;
-                document.getElementById('zoomLevel').textContent = `Zoom: ${Math.round(scale * 50)}%`;
-                drawMap();
-            }
-        }
-        
-        function zoomOut() {
-            if (scale > 0.1) {
-                scale *= 0.8;
-                document.getElementById('zoomLevel').textContent = `Zoom: ${Math.round(scale * 50)}%`;
-                drawMap();
-            }
-        }
-        
-        function resetView() {
-            scale = 2;
-            offsetX = 0;
-            offsetY = 0;
-            document.getElementById('zoomLevel').textContent = 'Zoom: 100%';
-            drawMap();
-        }
-        
-        // Initial zeichnen
-        drawMap();
+        // Initialisierung
+        initDimensionSelect();
     </script>
 </body>
 </html>
