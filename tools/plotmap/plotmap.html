@@ -123,7 +123,7 @@
     
     <script>
         // Plot-Daten
-        const plotsData = {"0": [{"name": "Negerplot + Pissplot", "owner": "Milchmann77", "x_min": 0, "z_min": 0, "x_max": 15, "z_max": 3, "area": 64, "price": 16384, "color": "#51fa68"}]};
+        const plotsData = {"0": [{"name": "Zusammengef\u00fchrt: Plot 3 + Plot 4", "owner": "Milchmann77", "x_min": 0, "z_min": 0, "x_max": 15, "z_max": 3, "area_m2": 64, "area_display": "64 m\u00b2", "price": 16384, "color": "#51fa68"}]};
         const dimensionNames = {"-1": "Nether", "-2147483648": "Mystcraft Profiler", "0": "Oberwelt", "1": "Ende"};
         
         // Canvas Setup
@@ -349,7 +349,7 @@
                 <div class="plot-info">
                     <div><strong>Besitzer:</strong> ${plot.owner}</div>
                     <div><strong>Koordinaten:</strong> X: ${plot.x_min} bis ${plot.x_max}, Z: ${plot.z_min} bis ${plot.z_max}</div>
-                    <div><strong>Fläche:</strong> ${plot.area.toLocaleString('de-DE')} m²</div>
+                    <div><strong>Fläche:</strong> ${plot.area_display}</div>
                     <div><strong>Kaufpreis:</strong> ${plot.price.toLocaleString('de-DE')} €</div>
                 </div>
             `;
